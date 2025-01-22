@@ -375,11 +375,22 @@
             }
 
             function updateUrlParameter(page) {
+                const currentUrl = new URL(window.location.href);
+
                 if (page === 0) {
-                    history.replaceState(null, '', '/');
+                    currentUrl.searchParams.delete('page');
                 } else {
-                    history.replaceState(null, '', `/?page=${page}`);
+                    currentUrl.searchParams.set('page', page);
                 }
+
+                // Preserve the NSFW parameter if it exists
+                const nsfw = currentUrl.searchParams.get('nsfw');
+
+                // Build the new URL, maintaining the nsfw parameter if it exists
+                const newUrl = page === 0 && !nsfw ? '/' :
+                    `/?${currentUrl.searchParams.toString()}`;
+
+                history.replaceState(null, '', newUrl);
             }
 
             function getInitialPage() {
@@ -461,6 +472,7 @@
                 } else {
                     currentUrl.searchParams.delete('nsfw');
                 }
+                // Preserve the page parameter if it exists
                 window.location.href = currentUrl.toString();
             }
 
