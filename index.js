@@ -31,7 +31,10 @@ function fetchFromDumpert(page = 0) {
 }
 
 const server = http.createServer(async (req, res) => {
-    if (req.url === '/') {
+    const urlObj = new URL(req.url, `http://${req.headers.host}`);
+    const pathname = urlObj.pathname;
+
+    if (pathname === '/') {
         fs.readFile(HTML_PATH, (err, content) => {
             if (err) {
                 res.writeHead(500);
@@ -42,9 +45,9 @@ const server = http.createServer(async (req, res) => {
             res.end(content);
         });
     }
-    else if (req.url.startsWith('/api/videos/')) {
+    else if (pathname.startsWith('/api/videos/')) {
         try {
-            const page = parseInt(req.url.split('/').pop()) || 0;
+            const page = parseInt(pathname.split('/').pop()) || 0;
             const data = await fetchFromDumpert(page);
             const jsonData = JSON.parse(data);
             jsonData.items.forEach(item => {
@@ -65,8 +68,8 @@ const server = http.createServer(async (req, res) => {
             res.end(JSON.stringify({ error: 'Failed to fetch videos' }));
         }
     }
-    else if (req.url.startsWith('/proxy/')) {
-        const originalPath = req.url.replace('/proxy', '');
+    else if (pathname.startsWith('/proxy/')) {
+        const originalPath = pathname.replace('/proxy', '');
         const targetUrl = `https://media.dumpert.nl${originalPath}`;
         proxyRequest(targetUrl, res);
     }
