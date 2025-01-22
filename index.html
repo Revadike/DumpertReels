@@ -244,6 +244,10 @@
                 video.addEventListener('loadedmetadata', () => {
                     if (video.duration > MAX_VIDEO_DURATION) {
                         container.style.display = 'none';
+                        container.classList.add('hidden-video');
+
+                        // Trigger setupIntersectionObserver to update observers
+                        setupIntersectionObserver();
                     }
                 });
 
@@ -267,7 +271,12 @@
                 if (!autoplayEnabled) return;
 
                 const currentContainer = e.target.closest('.video-container');
-                const nextContainer = currentContainer.nextElementSibling;
+                let nextContainer = currentContainer.nextElementSibling;
+
+                // Find the next non-hidden video container
+                while (nextContainer && nextContainer.classList.contains('hidden-video')) {
+                    nextContainer = nextContainer.nextElementSibling;
+                }
 
                 if (nextContainer) {
                     nextContainer.scrollIntoView({ behavior: 'smooth' });
@@ -309,6 +318,7 @@
                     observer.observe(container);
                 });
 
+                // Setup observer for infinite loading
                 const loadingObserver = new IntersectionObserver(async (entries) => {
                     const container = entries[0].target;
                     if (!entries[0].isIntersecting || isLoading) return;
@@ -322,8 +332,17 @@
                     rootMargin: '300px'
                 });
 
-                const videoContainers = document.querySelectorAll('.video-container');
+                // Update first/last video markers
+                const videoContainers = Array.from(document.querySelectorAll('.video-container'))
+                    .filter(container => !container.classList.contains('hidden-video'));
+
                 if (videoContainers.length > 0) {
+                    // Remove existing markers
+                    document.querySelectorAll('.first-video, .last-video').forEach(el => {
+                        el.classList.remove('first-video', 'last-video');
+                    });
+
+                    // Add new markers
                     videoContainers[0].classList.add('first-video');
                     videoContainers[videoContainers.length - 1].classList.add('last-video');
 
