@@ -138,18 +138,56 @@
             .loading.visible {
                 display: block;
             }
+
+            .controls {
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: rgba(0, 0, 0, 0.8);
+                padding: 10px;
+                border-radius: 8px;
+                z-index: 100;
+                opacity: 0;
+                transition: opacity 0.3s ease;
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .controls:hover {
+                opacity: 1;
+            }
+
+            .controls.visible {
+                opacity: 1;
+            }
+
+            .toggle-container {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                color: white;
+                font-size: 0.9rem;
+            }
         </style>
     </head>
 
     <body>
-        <div class="controls">
-            <label class="autoplay-toggle">
+        <div class="controls" id="controls">
+            <div class="toggle-container">
                 <span>Autoplay</span>
                 <label class="switch">
                     <input type="checkbox" id="autoplayToggle" checked>
                     <span class="slider"></span>
                 </label>
-            </label>
+            </div>
+            <div class="toggle-container">
+                <span>NSFW</span>
+                <label class="switch">
+                    <input type="checkbox" id="nsfwToggle">
+                    <span class="slider"></span>
+                </label>
+            </div>
         </div>
         <div class="loading">Loading more videos...</div>
         <div class="reel-container" id="reelContainer"></div>
@@ -162,7 +200,9 @@
 
             async function fetchVideos(page) {
                 try {
-                    const response = await fetch(`/api/videos/${page}`);
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const nsfw = urlParams.get('nsfw') === '1';
+                    const response = await fetch(`/api/videos/${page}${nsfw ? '?nsfw=1' : ''}`);
                     const data = await response.json();
                     return data.items;
                 } catch (error) {
@@ -387,6 +427,48 @@
                 }
             });
 
+            let controlsTimeout;
+            function showControls() {
+                const controls = document.getElementById('controls');
+                controls.classList.add('visible');
+
+                clearTimeout(controlsTimeout);
+                controlsTimeout = setTimeout(() => {
+                    if (!controls.matches(':hover')) {
+                        controls.classList.remove('visible');
+                    }
+                }, 2000);
+            }
+
+            document.addEventListener('DOMContentLoaded', () => {
+                const controls = document.getElementById('controls');
+                controls.addEventListener('mouseenter', () => {
+                    clearTimeout(controlsTimeout);
+                    controls.classList.add('visible');
+                });
+
+                controls.addEventListener('mouseleave', () => {
+                    controlsTimeout = setTimeout(() => {
+                        controls.classList.remove('visible');
+                    }, 2000);
+                });
+            });
+
+            function updateNsfwParameter(enabled) {
+                const currentUrl = new URL(window.location.href);
+                if (enabled) {
+                    currentUrl.searchParams.set('nsfw', '1');
+                } else {
+                    currentUrl.searchParams.delete('nsfw');
+                }
+                window.location.href = currentUrl.toString();
+            }
+
+            function getInitialNsfw() {
+                const urlParams = new URLSearchParams(window.location.search);
+                return urlParams.get('nsfw') === '1';
+            }
+
             async function initializeApp() {
                 currentPage = getInitialPage();
                 const reelContainer = document.getElementById('reelContainer');
@@ -404,6 +486,16 @@
                 if (currentPage > 0) {
                     updateUrlParameter(currentPage);
                 }
+
+                // Initialize NSFW toggle
+                const nsfwToggle = document.getElementById('nsfwToggle');
+                nsfwToggle.checked = getInitialNsfw();
+                nsfwToggle.addEventListener('change', (e) => {
+                    updateNsfwParameter(e.target.checked);
+                });
+
+                // Setup mouse movement handler
+                document.addEventListener('mousemove', showControls);
             }
 
             initializeApp();

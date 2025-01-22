@@ -20,9 +20,17 @@ function proxyRequest(url, res) {
 }
 
 // Helper function to fetch data from Dumpert API
-function fetchFromDumpert(page = 0) {
+function fetchFromDumpert(page = 0, nsfw = false) {
     return new Promise((resolve, reject) => {
-        https.get(`https://api-live.dumpert.nl/mobile_api/json/video/toppers/${page}/`, (resp) => {
+        const options = {
+            headers: {}
+        };
+
+        if (nsfw) {
+            options.headers['X-Dumpert-NSFW'] = '1';
+        }
+
+        https.get(`https://api-live.dumpert.nl/mobile_api/json/video/toppers/${page}/`, options, (resp) => {
             let data = '';
             resp.on('data', (chunk) => data += chunk);
             resp.on('end', () => resolve(data));
@@ -33,6 +41,7 @@ function fetchFromDumpert(page = 0) {
 const server = http.createServer(async (req, res) => {
     const urlObj = new URL(req.url, `http://${req.headers.host}`);
     const pathname = urlObj.pathname;
+    const nsfw = urlObj.searchParams.get('nsfw') === '1';
 
     if (pathname === '/') {
         fs.readFile(HTML_PATH, (err, content) => {
@@ -48,7 +57,7 @@ const server = http.createServer(async (req, res) => {
     else if (pathname.startsWith('/api/videos/')) {
         try {
             const page = parseInt(pathname.split('/').pop()) || 0;
-            const data = await fetchFromDumpert(page);
+            const data = await fetchFromDumpert(page, nsfw);
             const jsonData = JSON.parse(data);
             jsonData.items.forEach(item => {
                 item.media.forEach(media => {
