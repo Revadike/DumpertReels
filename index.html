@@ -51,24 +51,14 @@
             }
 
             .title {
-                font-size: 1.2rem;
+                font-size: 1.5rem;
                 font-weight: bold;
                 margin-bottom: 8px;
             }
 
             .description {
-                font-size: 0.9rem;
+                font-size: 1.1rem;
                 opacity: 0.8;
-            }
-
-            .controls {
-                position: fixed;
-                bottom: 20px;
-                right: 20px;
-                background: rgba(0, 0, 0, 0.8);
-                padding: 10px;
-                border-radius: 8px;
-                z-index: 100;
             }
 
             .autoplay-toggle {
@@ -193,6 +183,9 @@
         <div class="reel-container" id="reelContainer"></div>
 
         <script>
+            const MAX_VIDEO_DURATION = 5 * 60; // 5 minutes in seconds
+            // const MAX_VIDEO_DURATION = 30;
+
             let currentPage = 0;
             let isLoading = false;
             let videos = [];
@@ -244,6 +237,16 @@
                 video.muted = false;
                 video.controls = true;
 
+                // Make video element always active for keyboard shortcuts
+                video.tabIndex = 0;
+
+                // Check video duration when metadata is loaded
+                video.addEventListener('loadedmetadata', () => {
+                    if (video.duration > MAX_VIDEO_DURATION) {
+                        container.style.display = 'none';
+                    }
+                });
+
                 const streamUrl = getHighestQualityStream(videoData.media[0].variants);
 
                 if (Hls.isSupported()) {
@@ -256,6 +259,7 @@
 
                 container.appendChild(video);
                 container.appendChild(overlay);
+
                 return container;
             }
 
@@ -280,6 +284,9 @@
                         if (autoplayEnabled) {
                             video.play();
                         }
+
+                        // Focus the visible video
+                        video.focus();
 
                         updateUrlParameter(page);
                     } else {
